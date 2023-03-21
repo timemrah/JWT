@@ -1,7 +1,6 @@
 <?php
 
 
-
 /**
  * JWT - Mehmet Emrah Tuncel - timemrah@gmail.com
  *
@@ -10,10 +9,7 @@
  * 2.Verifies a token from the client.
  *
  * It is not recommended to work with the same instantiated object while performing these two separate operations.
- */
-
-
-
+ ******************************************************************************/
 
 class JWT
 {
@@ -100,30 +96,16 @@ class JWT
         $this->encPayload = $part[1];
         $this->sign       = $part[2];
 
-
         // Header Check :
-        $jsonCheckHeader = json_decode($this->base64UrlDecode($this->encHeader), true);
-        if($jsonCheckHeader === NULL){
-            $this->addError('headerNotJson', 'The header is not json');
-        } else{
-            $this->header = $jsonCheckHeader;
-            if(empty($this->header['algo'])){
-                $this->addError('algorithmNotDefined', 'Algorithm not defined in header.');
-            }
-            if(empty($this->header['type']) || $this->header['type'] !== 'JWT'){
-                $this->addError('typeNotDefined', 'Type not defined in header.');
-            }
+        $checkHeader = json_decode($this->base64UrlDecode($this->encHeader), true);
+        if($this->checkHeader($checkHeader)){
+            $this->header = $checkHeader;
         }
 
         // Payload Check
-        $jsonCheckPayload = json_decode($this->base64UrlDecode($this->encPayload), true);
-        if($jsonCheckPayload === NULL){
-            $this->addError('payloadNotJson', 'The payload is not json');
-        } else{
-            $this->payload = $jsonCheckPayload;
-            if(empty($this->payload)){
-                $this->addError('payloadIsEmpty', 'Payload is empty.');
-            }
+        $heckPayload = json_decode($this->base64UrlDecode($this->encPayload), true);
+        if($this->checkPayload($heckPayload)){
+            $this->payload = $heckPayload;
         }
 
         // Header And Payload Error Check
@@ -244,5 +226,42 @@ class JWT
     private function algorithmIsSupported(string $algo):bool{
         return array_key_exists($algo, $this->supportPhpCrypt);
     }
+
+
+    private function checkHeader(?array $header):bool{
+
+        $isError = false;
+
+
+        if($header === NULL){
+            $this->addError('unavailableHeader', 'Header not available.');
+            $isError = true;
+        } else{
+            if(empty($header['algo'])){
+                $this->addError('algorithmNotDefined', 'Algorithm not defined in header.');
+                $isError = true;
+            }
+            if(empty($header['type']) || $header['type'] !== 'JWT'){
+                $this->addError('typeNotDefined', 'Type not defined in header.');
+                $isError = true;
+            }
+        }
+
+        return !$isError;
+    }
+
+    private function checkPayload(?array $payload):bool{
+
+        if($payload === NULL){
+            $this->addError('unavailablePayload', 'Payload not available.');
+            return false;
+        } else if(empty($payload)){
+            $this->addError('payloadIsEmpty', 'Payload is empty.');
+            return false;
+        }
+
+        return true;
+    }
+
 
 }
