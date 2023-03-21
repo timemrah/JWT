@@ -4,9 +4,9 @@
 /**
  * JWT - Mehmet Emrah Tuncel - timemrah@gmail.com
  *
- * The JWT object is used for two main purposes
- * 1. Gives client side a token that can be checked in the future
- * 2.Verifies a token from the client.
+ * The JWT object is used for two main purposes.
+ * 1.It provides a token to the client side that can be checked in the future.
+ * 2.It verifies a token from the client.
  *
  * It is not recommended to work with the same instantiated object while performing these two separate operations.
  ******************************************************************************/
