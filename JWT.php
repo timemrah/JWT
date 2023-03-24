@@ -14,23 +14,22 @@
 class JWT
 {
 
-    private string $secret = '';
-    private string $algo = 'HS256';
+    private string $secret     = '';
+    private string $algo       = 'HS256';
 
     private string $encHeader  = '';
     private string $encPayload = '';
+    private array  $header     = [];
+    private array  $payload    = [];
     private string $sign       = '';
     private string $token      = '';
-    private array  $error       = [];
+    private array  $error      = [];
 
     private array $supportPhpCrypt = [
         'HS256' => 'SHA256',
         'HS384' => 'SHA384',
         'HS512' => 'SHA512'
     ];
-
-    private array $header = [];
-    private array $payload = [];
 
 
     public function __construct(string $secret = null, string $algo = null){
@@ -59,6 +58,7 @@ class JWT
     }
 
 
+    // TOKEN :
     public function createToken(?string $algo = null, ?string $secret = null):bool|string{
 
         if($algo)   $this->setAlgo($algo);
@@ -73,9 +73,7 @@ class JWT
 
         $this->encHeader  = $this->base64UrlEncode(json_encode($this->header));
         $this->encPayload = $this->base64UrlEncode(json_encode($this->payload));
-
-        $signBinary = hash_hmac($this->globalAlgorithmToPhp($this->algo), "{$this->encHeader}.{$this->encPayload}", $this->secret, true);
-        $this->sign = $this->base64UrlEncode($signBinary);
+        $this->sign       = $this->base64HashHmac($this->encHeader, $this->encPayload);
 
         return "{$this->encHeader}.{$this->encPayload}.{$this->sign}";
 
@@ -130,11 +128,9 @@ class JWT
         if(!$this->token)                      return false;
         if($this->isError())                   return false;
 
-        $createCheckSignBinary = hash_hmac($this->globalAlgorithmToPhp($this->algo), "{$this->encHeader}.{$this->encPayload}", $this->secret, true);
-        $createCheckSign       = $this->base64UrlEncode($createCheckSignBinary);
-
-        if(!hash_equals($this->sign, $createCheckSign)){
-            $this->addError('unverifiedSign', 'The signature cannot be verified with the secret key.');
+        $createSignForCheck = $this->base64HashHmac($this->encHeader, $this->encPayload);
+        if(!hash_equals($this->sign, $createSignForCheck)){
+            $this->addError('signVerifyError', 'The signature could not be verified.');
             return false;
         }
 
@@ -161,7 +157,7 @@ class JWT
 
     // Iss
     public function getIss()           :string { return $this->payload['iss'] ?? ''; }
-    public function setIss(string $iss):void   { $this->payload['iss'] = $iss;       }
+    public function setIss(string $iss = NULL):void{ $this->payload['iss'] = $iss ?? $_SERVER['HTTP_HOST']; }
     public function removeIss()        :void   { unset($this->payload['iss']);       }
 
     // Sub
@@ -171,12 +167,12 @@ class JWT
 
     // Aud
     public function getAud()           :string { return $this->payload['aud'] ?? ''; }
-    public function setAud(string $aud):void   { $this->payload['aud'] = $aud;       }
+    public function setAud(string $aud = NULL):void{ $this->payload['aud'] = $aud ?? $_SERVER['HTTP_HOST']; }
     public function removeAud()        :void   { unset($this->payload['aud']);       }
 
     // Exp
     public function getExp()           :string { return $this->payload['exp'] ?? ''; }
-    public function setExp(string|int $exp):void{ $this->payload['exp'] = $exp;      }
+    public function setExp(string|int $exp):void{ $this->payload['exp'] = is_numeric($exp) ? $exp : strtotime($exp); }
     public function removeExp()        :void   { unset($this->payload['exp']);       }
 
     // Nbf
@@ -186,7 +182,7 @@ class JWT
 
     // Iat
     public function getIat()           :string { return $this->payload['iat'] ?? ''; }
-    public function setIat(string $iat):void   { $this->payload['iat'] = $iat;       }
+    public function setIat(string|int $iat = null):void{ $this->payload['iat'] = $iat ?? time();       }
     public function removeIat()        :void   { unset($this->payload['iat']);       }
 
     // Jti
@@ -261,6 +257,12 @@ class JWT
         }
 
         return true;
+    }
+
+
+    private function base64HashHmac(string $encHeader, string $encPayload):string{
+        $binary = hash_hmac($this->globalAlgorithmToPhp($this->algo), "{$encHeader}.{$encPayload}", $this->secret, true);
+        return $this->base64UrlEncode($binary);
     }
 
 
